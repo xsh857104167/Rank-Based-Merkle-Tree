@@ -1,5 +1,6 @@
 #include <string>
 #include <openssl/sha.h>
+#include <vector>
 #ifndef BTREE_H_
 #define BTREE_H_
 // 位置，表示节点之间的关系
@@ -9,6 +10,12 @@ typedef struct Pos{
 	int nodeNum;
 	int rank;
 }Pos;
+
+typedef struct Prof{
+	std::string data;
+	int flag;
+	int rank;
+}Prof;
 
 class BTree {
 public:
@@ -31,6 +38,12 @@ public:
 	 */
 	static BTree* reBuildTree(std::string data[], Pos pos[], int len);
 	void serializeToArrays(std::string data[], Pos pos[]);
+	static BTree* locate(BTree *root, int index, std::vector<BTree*> &vec);
+	static void proofGen(std::vector<Prof> &proof, std::vector<BTree*> &vec);
+	static std::string buildRootFromProf(Prof prof[], int len);
+	void indertNode(std::string data, int dataLen, int index, std::vector<Prof> &proof);
+	void deleteNode(int index, std::vector<Prof> &proof);
+	void modify(std::string data, int dataLen, int index, std::vector<Prof> &proof);
 };
 
 #endif /* BTREE_H_ */
