@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <queue>
+#include <vector>
 #include <openssl/sha.h>
 
 //using namespace std;
@@ -44,7 +45,8 @@ BTree* BTree::buildTree(std::string data[], int len, int dataLen){
 	// 1. 数据全部hash，并new叶子节点
 	for(int i = 0; i < len; i++){
 		trees[i] = new BTree();
-		SHA256((unsigned char*)data[i].c_str(), dataLen, trees[i]->label);
+		std::string str = data[i] + "1";
+		SHA256((unsigned char*)str.c_str(), dataLen, trees[i]->label);
 	}
 
 	int levelLen = len;
@@ -57,7 +59,6 @@ BTree* BTree::buildTree(std::string data[], int len, int dataLen){
 			}
 			if(next != -1){
 				int rank = trees[i]->rank + trees[next]->rank;
-//				unsigned char str[2 * hash_length + 1];
 				std::string str = "";
 				str = str + (char*)trees[i]->label;
 				str = str + (char*)trees[next]->label; // 这里应该把自己的flage也连接到hash中
@@ -143,5 +144,81 @@ void BTree::serializeToArrays(std::string data[], Pos pos[]){
 			pos[i].rightPos = -1;
 		}
 		i++;
+	}
+}
+/**
+ * 定位叶节点
+ * 给定树和叶节点的index（1,....)，查找此树中第index个节点
+ * index 必须小于或等于root的rank
+ */
+BTree* BTree::locate(BTree *root, int index, std::vector<BTree*> &vec){
+	BTree *v = root;
+	int i = index;
+	vec.push_back(root);
+	while(v->left != NULL || v->right != NULL){
+		if (i <= v->left->rank){
+			v = v->left;
+		}else {
+			i = i - v->left->rank;
+			v = v->right;
+		}
+		vec.push_back(v);
+	}
+	return v;
+}
+/**
+ * 根据叶子节点的路径vec生成证明proof
+ */
+void BTree::proofGen(std::vector<Prof> &proof, std::vector<BTree*> &vec){
+	// 先把此节点放进证明中
+	BTree *node = vec.back();
+	Prof prof;
+	prof.data = node->label;
+	prof.flag = node->flag;
+	prof.rank = node->rank;
+	proof.push_back(prof);
+	// 再把所有的兄弟节点放进去
+	while(!vec.empty()){
+		BTree *node = vec.back();
+		vec.pop_back();
+		if(!vec.empty()){
+			BTree *parent = vec.back();
+			Prof prof;
+			if(node->flag == 0){
+				prof.data = parent->right->label;
+				prof.flag = parent->right->flag;
+				prof.rank = parent->right->rank;
+			}else if (node->flag == 1){
+				prof.data = parent->left->label;
+				prof.flag = parent->left->flag;
+				prof.rank = parent->left->rank;
+			}
+		}
+	}
+}
+
+void BTree::modify(std::string data, int dataLen, int index, std::vector<Prof> &proof){
+//	int hash_length = SHA256_DIGEST_LENGTH;
+	std::vector<BTree*> vec;
+	BTree::locate(this, index, vec);
+	std::vector<BTree*> vec_cpy(vec);
+	BTree::proofGen(proof, vec_cpy);
+	// 先修改叶子节点
+	BTree *node = vec.back();
+	vec.pop_back();
+	std::string str = data + "1";
+	SHA256((unsigned char*)str.c_str(), dataLen, node->label);
+
+	while(!vec.empty()){
+		BTree *node = vec.back();
+		vec.pop_back();
+
+		std::string str = "";
+		str = str + (char*)node->left->label;
+		str = str + (char*)node->right->label; // 这里应该把自己的flage也连接到hash中
+		std::stringstream ss;
+		ss << node->rank;
+		str = str + ss.str();
+		SHA256((unsigned char*)str.c_str(), str.length(), node->label);
 	}
 }
