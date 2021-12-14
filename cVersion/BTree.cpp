@@ -36,9 +36,9 @@ BTree::~BTree() {
 /**
  * 静态函数
  * 通过数据初始化构造树
- * data[]:数据块，len：数据块的数量，dataLen：数据的长度（字节）
+ * data[]:数据块，len：数据块的数量
  */
-BTree* BTree::buildTree(std::string data[], int len, int dataLen){
+BTree* BTree::buildTree(std::string data[], int len){
 	int hash_length = SHA256_DIGEST_LENGTH;
 	BTree *trees[len];
 //				= new BTree();
@@ -46,7 +46,7 @@ BTree* BTree::buildTree(std::string data[], int len, int dataLen){
 	for(int i = 0; i < len; i++){
 		trees[i] = new BTree();
 		std::string str = data[i] + "1";
-		SHA256((unsigned char*)str.c_str(), dataLen, trees[i]->label);
+		SHA256((unsigned char*)str.c_str(), str.length(), trees[i]->label);
 	}
 
 	int levelLen = len;
