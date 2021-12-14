@@ -33,7 +33,7 @@ public:
 	/**
 	 * 通过数据初始化构造树
 	 */
-	static BTree* buildTree(std::string data[], int len, int dataLen);
+	static BTree* buildTree(std::string data[], int len);
 	/**
 	 * 通过已保存的数组和位置重新构造树
 	 */
