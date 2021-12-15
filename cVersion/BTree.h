@@ -39,7 +39,7 @@ public:
 	 */
 	static BTree* reBuildTree(std::string data[], Pos pos[], int len);
 	void serializeToArrays(std::string data[], Pos pos[]);
-	static BTree* locate(const BTree *root, int index, std::vector<BTree*> &vec);
+	static BTree* locate(BTree *root, int index, std::vector<BTree*> &vec);
 	static void proofGen(std::vector<Prof> &proof, std::vector<BTree*> &vec);
 	static std::string buildRootFromProf(Prof prof[], int len);
 	void indertNode(std::string data, int dataLen, int index, std::vector<Prof> &proof);
