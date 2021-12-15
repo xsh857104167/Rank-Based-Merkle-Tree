@@ -151,7 +151,7 @@ void BTree::serializeToArrays(std::string data[], Pos pos[]){
  * 给定树和叶节点的index（1,....)，查找此树中第index个节点
  * index 必须小于或等于root的rank
  */
-BTree* BTree::locate(const BTree *root, int index, std::vector<BTree*> &vec){
+BTree* BTree::locate(BTree *root, int index, std::vector<BTree*> &vec){
 	BTree *v = root;
 	int i = index;
 	vec.push_back(v);
@@ -204,7 +204,7 @@ void BTree::proofGen(std::vector<Prof> &proof, std::vector<BTree*> &vec){
  */
 std::string BTree::buildRootFromProf(Prof prof[], int len){
 	BTree *node = new BTree();
-	node->rank = prof[len - 1].rank + prof[len - 2];
+	node->rank = prof[len - 1].rank + prof[len - 2].rank;
 	std::string str = "";
 	if(prof[len - 1].flag == 0){
 		str = str + (char*)prof[len-1].data;
