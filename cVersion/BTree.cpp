@@ -54,7 +54,7 @@ BTree* BTree::buildTree(std::string data[], int len){
 	while(levelLen > 1){
 		for(int i = 0; i < levelLen; i += 2){
 			int next = i + 1;
-			if(next >= len){ // 若出现奇数
+			if(next >= levelLen){ // 若出现奇数
 				next = -1;
 			}
 			if(next != -1){
@@ -77,8 +77,9 @@ BTree* BTree::buildTree(std::string data[], int len){
 			}else{
 				trees[i / 2] = trees[i]; // 奇数时，最后一个直接进入下一层
 			}
-			levelLen = (levelLen + 1) / 2;
+			
 		}
+		levelLen = (levelLen + 1) / 2;
 	}
 
 	return trees[0];
