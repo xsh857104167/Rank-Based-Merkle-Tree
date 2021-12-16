@@ -38,15 +38,16 @@ BTree::~BTree() {
  * 通过数据初始化构造树
  * data[]:数据块，len：数据块的数量
  */
-BTree* BTree::buildTree(std::string data[], int len){
+BTree* BTree::buildTree(std::string hash[], int len){
 	int hash_length = SHA256_DIGEST_LENGTH;
 	BTree *trees[len];
 //				= new BTree();
 	// 1. 数据全部hash，并new叶子节点
 	for(int i = 0; i < len; i++){
 		trees[i] = new BTree();
-		std::string str = data[i] + "1";
+		std::string str = hash[i] + "1";
 		SHA256((unsigned char*)str.c_str(), str.length(), trees[i]->label);
+		trees[i]->label[hash_length] = '\0';
 	}
 
 	int levelLen = len;
@@ -66,18 +67,20 @@ BTree* BTree::buildTree(std::string data[], int len){
 				ss << rank;
 				str = str + ss.str();
 
-				unsigned char digest[hash_length + 1];
-				SHA256((unsigned char*)str.c_str(), str.length(), digest);
+				BTree *node = new BTree();
+				SHA256((unsigned char*)str.c_str(), str.length(), node->label);
+				node->label[hash_length] = '\0';
+				node->rank = rank;
+				node->nodeNum = trees[i]->nodeNum + trees[next]->nodeNum + 1;
+
 				trees[i]->flag = 0;
 				trees[next]->flag = 1;
-				BTree *node = new BTree(rank, trees[i]->nodeNum + trees[next]->nodeNum + 1, digest);
 				node->left = trees[i];
 				node->right = trees[next];
 				trees[i / 2] = node;
 			}else{
 				trees[i / 2] = trees[i]; // 奇数时，最后一个直接进入下一层
 			}
-			
 		}
 		levelLen = (levelLen + 1) / 2;
 	}
