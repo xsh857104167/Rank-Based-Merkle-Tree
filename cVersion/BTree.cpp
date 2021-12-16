@@ -196,7 +196,7 @@ void BTree::proofGen(std::vector<Prof> &proof, std::vector<BTree*> &vec){
 				prof.rank = parent->right->rank;
 			}else if (node->flag == 1){
 //				prof.data = parent->left->label;
-				strcpy((char*)prof.data, (char*)parent->left->flag);
+				strcpy((char*)prof.data, (char*)parent->left->label);
 				prof.flag = parent->left->flag;
 				prof.rank = parent->left->rank;
 			}
