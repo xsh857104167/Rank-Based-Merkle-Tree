@@ -33,18 +33,21 @@ public:
 	/**
 	 * 通过数据初始化构造树
 	 */
-	static BTree* buildTree(std::string data[], int len);
+	static BTree* buildTree(std::string hash[], int len);
 	/**
 	 * 通过已保存的数组和位置重新构造树
 	 */
 	static BTree* reBuildTree(std::string data[], Pos pos[], int len);
-	void serializeToArrays(std::string data[], Pos pos[]);
+	static BTree* reBuildTree(std::string path, int len);
+	void serializeToArrays(std::string data[], Pos pos[], std::string path);
+	void serializeToArrays(std::string path);
 	static BTree* locate(BTree *root, int index, std::vector<BTree*> &vec);
 	static void proofGen(std::vector<Prof> &proof, std::vector<BTree*> &vec);
 	static std::string buildRootFromProf(Prof prof[], int len);
 	void indertNode(std::string data, int dataLen, int index, std::vector<Prof> &proof);
 	static BTree* deleteNode(BTree *root, int index, std::vector<Prof> &proof);
 	void modify(std::string data, int dataLen, int index, std::vector<Prof> &proof);
+	static void twoLeavesInOne(Prof node, std::string insertNode);
 };
 
 #endif /* BTREE_H_ */
