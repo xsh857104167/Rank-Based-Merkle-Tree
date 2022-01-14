@@ -1,4 +1,5 @@
 #include "BTree.h"
+#include "Utils.h"
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,7 +37,7 @@ BTree::~BTree() {
 /**
  * 静态函数
  * 通过数据初始化构造树
- * data[]:数据块，len：数据块的数量
+ * hash[]:数据hash值的数组，len：数据块的数量
  */
 BTree* BTree::buildTree(std::string hash[], int len){
 	int hash_length = SHA256_DIGEST_LENGTH;
@@ -114,11 +115,46 @@ BTree* BTree::reBuildTree(std::string data[], Pos pos[], int len){
 	}
 	return trees[0];
 }
+BTree* BTree::reBuildTree(std::string path, int len){
+	std::string treePathNode = path + "-node";
+	std::string treePathPos = path + "-pos";
+	std::fstream in_node;
+	std::fstream in_pos;
+	in_node.open(treePathNode.c_str(), std::ios::in|std::ios::binary);
+	in_pos.open(treePathPos.c_str(), std::ios::in|std::ios::binary);
+	std::string data[len];
+	Pos pos[len];
+	char buff[512];
+	for(int i = 0; i < len; i++){
+		in_node>>buff;
+		char *temp = new char[SHA256_DIGEST_LENGTH + 1];
+		Utils::HexToBytes((unsigned char*)temp, buff, 2*SHA256_DIGEST_LENGTH);
+		temp[SHA256_DIGEST_LENGTH] = '\0';
+		data[i] = std::string(temp);
+	}
+	in_node.close();
+	for(int i = 0; i < len; i++){
+		in_pos>>buff;
+	    char *token;
+	    token = strtok(buff, ",");
+	    pos[i].leftPos = atoi(token);
+	    token = strtok(NULL,",");
+	    pos[i].rightPos = atoi(token);
+	    token = strtok(NULL,",");
+	    pos[i].nodeNum = atoi(token);
+	    token = strtok(NULL,",");
+	    pos[i].rank = atoi(token);
+	}
+	in_pos.close();
+	return BTree::reBuildTree(data, pos, len);
+}
 
 /**
  * 将树序列化为数组,层序遍历
+ * label直接存储
+ * 里面的代码写的极其不规范
  */
-void BTree::serializeToArrays(std::string data[], Pos pos[]){
+void BTree::serializeToArrays(std::string data[], Pos pos[], std::string path){
 	std::queue <BTree*> q;
 	data[0] = (char*)label;
 	q.push(left);
@@ -149,7 +185,86 @@ void BTree::serializeToArrays(std::string data[], Pos pos[]){
 		}
 		i++;
 	}
+	std::string treePathNode = path + "-node";
+	std::string treePathPos = path + "-pos";
+	std::fstream out_node;
+	out_node.open(treePathNode.c_str(), std::ios::out);
+	for(int i = 0; i < nodeNum; i++){
+		out_node <<data[i]<<std::endl;
+	}
+	out_node.close();
+
+	std::fstream out_pos;
+	out_pos.open(treePathPos.c_str(), std::ios::out);
+	for(int i = 0; i < nodeNum; i++){
+		out_pos<<pos[i].leftPos<<",";
+		out_pos<<pos[i].rightPos<<",";
+		out_pos<<pos[i].nodeNum<<",";
+		out_pos<<pos[i].rank<<std::endl;
+	}
+	out_pos.close();
 }
+/**
+ * 直接传路径存储下来
+ * label用16进制存储
+ */
+void BTree::serializeToArrays(std::string path){
+	std::string treePathNode = path + "-node";
+	std::string treePathPos = path + "-pos";
+	std::fstream out_node;
+	out_node.open(treePathNode.c_str(), std::ios::out);
+	std::fstream out_pos;
+	out_pos.open(treePathPos.c_str(), std::ios::out);
+
+	std::queue <BTree*> q;
+	char buff[2 * SHA256_DIGEST_LENGTH + 1];
+	Utils::BytesToHex(buff, (char*)label, SHA256_DIGEST_LENGTH);
+	out_node <<buff<<std::endl;
+	Pos pos;
+	q.push(left);
+	pos.leftPos = 1;
+	q.push(right);
+	pos.rightPos = 2;
+	pos.nodeNum = nodeNum;
+	pos.rank = rank;
+
+	out_pos<<pos.leftPos<<",";
+	out_pos<<pos.rightPos<<",";
+	out_pos<<pos.nodeNum<<",";
+	out_pos<<pos.rank<<std::endl;
+
+	int i = 1;
+	while (!q.empty()){
+		BTree *node = q.front();
+		q.pop();
+		Utils::BytesToHex(buff, (char*)node->label, SHA256_DIGEST_LENGTH);
+		out_node <<buff<<std::endl;
+
+		pos.nodeNum = node->nodeNum;
+		pos.rank = node->rank;
+		if(node->left != NULL){
+			q.push(node->left);
+			pos.leftPos = i + q.size();
+		}else {
+			pos.leftPos = -1;
+		}
+
+		if(node->right != NULL){
+			q.push(node->right);
+			pos.rightPos = i + q.size();
+		}else{
+			pos.rightPos = -1;
+		}
+		out_pos<<pos.leftPos<<",";
+		out_pos<<pos.rightPos<<",";
+		out_pos<<pos.nodeNum<<",";
+		out_pos<<pos.rank<<std::endl;
+		i++;
+	}
+	out_node.close();
+	out_pos.close();
+}
+
 /**
  * 定位叶节点
  * 给定树和叶节点的index（1,....)，查找此树中第index个节点
@@ -240,7 +355,8 @@ std::string BTree::buildRootFromProf(Prof prof[], int len){
 	return (char*)node->label;
 }
 /**
- * 在第i个数据块后插入数据data，并生成proof
+ * 在第index个数据块后插入数据data，并生成proof
+ * index都是从1开始的索引
  */
 void BTree::indertNode(std::string data, int dataLen, int index, std::vector<Prof> &proof){
 	int hash_length = SHA256_DIGEST_LENGTH;
@@ -306,6 +422,7 @@ void BTree::indertNode(std::string data, int dataLen, int index, std::vector<Pro
 }
 /**
  * 删除第index个数据块
+ * index都是从1开始的索引
  */
 BTree* BTree::deleteNode(BTree *root, int index, std::vector<Prof> &proof){
 	std::vector<BTree*> vec;
@@ -353,7 +470,9 @@ BTree* BTree::deleteNode(BTree *root, int index, std::vector<Prof> &proof){
 }
 
 /**
- * 修改第i个数据块，并生成proof
+ * 修改第index个数据块，并生成proof
+ * index都是从1开始的索引
+ * data为修改后的hash, dataLen为data的字节数，proof为生成的证明
  */
 void BTree::modify(std::string data, int dataLen, int index, std::vector<Prof> &proof){
 //	int hash_length = SHA256_DIGEST_LENGTH;
@@ -380,4 +499,27 @@ void BTree::modify(std::string data, int dataLen, int index, std::vector<Prof> &
 		SHA256((unsigned char*)str.c_str(), str.length(), node->label);
 	}
 
+}
+/**
+ * 用于客户端插入数据，收到proof后生成新的根时使用
+ * node表示插入前afterWhich节点
+ */
+void BTree::twoLeavesInOne(Prof node, std::string insertNode){
+	int hash_length = SHA256_DIGEST_LENGTH;
+	unsigned char insertLabel[hash_length + 1];
+	std::string str = insertNode + "1";
+	SHA256((unsigned char*)str.c_str(), str.length(), insertLabel);
+	insertLabel[hash_length] = '\0';
+
+	int rank = 2;
+	std::string newStr = "";
+	str = str + (char*)node.data;
+	str = str + (char*)insertLabel;
+	std::stringstream ss;
+	ss << rank;
+	str = str + ss.str();
+
+	SHA256((unsigned char*)newStr.c_str(), newStr.length(), node.data);
+	node.data[hash_length] = '\0';
+	node.rank = rank;
 }
